@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LeetCode Markdown Link Converter</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, sans-serif;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      place-items: center;
+      background: Canvas;
+      color: CanvasText;
+    }
+
+    main {
+      width: min(680px, calc(100% - 2rem));
+    }
+
+    h1 {
+      margin-bottom: 0.25rem;
+    }
+
+    label,
+    #status {
+      display: block;
+      margin: 1rem 0 0.5rem;
+      font-weight: 600;
+    }
+
+    input,
+    textarea {
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      border: 1px solid color-mix(in srgb, CanvasText 30%, transparent);
+      border-radius: 0.5rem;
+      padding: 0.85rem;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 3.25rem;
+      overflow-wrap: anywhere;
+      background: color-mix(in srgb, CanvasText 8%, Canvas);
+      resize: vertical;
+    }
+
+    #status {
+      min-height: 1.5rem;
+      color: color-mix(in srgb, CanvasText 75%, Canvas);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>LeetCode Markdown Link Converter</h1>
+    <p>Paste a LeetCode problem URL. Edit the generated Markdown whenever needed; every change is copied automatically.</p>
+
+    <label for="url">LeetCode URL</label>
+    <input id="url" type="url" placeholder="https://leetcode.com/problems/two-sum/" autofocus>
+
+    <label for="result">Markdown</label>
+    <textarea id="result" rows="3" placeholder="Your editable Markdown link appears here." spellcheck="false"></textarea>
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <script>
+    const urlInput = document.querySelector("#url");
+    const result = document.querySelector("#result");
+    const status = document.querySelector("#status");
+
+    function getProblemTitle(urlText) {
+      const url = new URL(urlText);
+      const isLeetCode = /(^|\.)leetcode\.com$/i.test(url.hostname);
+      const match = url.pathname.match(/^\/problems\/([^/?#]+)/i);
+
+      if (!isLeetCode || !match) {
+        throw new Error("Paste a LeetCode problem URL.");
+      }
+
+      return decodeURIComponent(match[1])
+        .split("-")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      textarea.select();
+      const copied = document.execCommand("copy");
+      textarea.remove();
+
+      if (!copied) {
+        throw new Error("Clipboard access was denied.");
+      }
+    }
+
+    async function convertUrl() {
+      const url = urlInput.value.trim();
+
+      if (!url) {
+        result.value = "";
+        status.textContent = "";
+        return;
+      }
+
+      try {
+        const title = getProblemTitle(url);
+        const markdown = `[${title}](${url})`;
+        result.value = markdown;
+        await copyResult();
+      } catch (error) {
+        result.value = "";
+        status.textContent = error.message;
+      }
+    }
+
+    async function copyResult() {
+      const markdown = result.value.trim();
+
+      if (!markdown) {
+        status.textContent = "";
+        return;
+      }
+
+      try {
+        await copyText(markdown);
+        status.textContent = "Copied to clipboard.";
+      } catch (error) {
+        status.textContent = error.message;
+      }
+    }
+
+    urlInput.addEventListener("input", convertUrl);
+    urlInput.addEventListener("focus", () => urlInput.select());
+    urlInput.addEventListener("click", () => urlInput.select());
+    result.addEventListener("input", copyResult);
+  </script>
+</body>
+</html>
